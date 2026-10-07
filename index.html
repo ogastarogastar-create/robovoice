@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>CyberSpeech Pocket - 会話補助＆ロボットボイス</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Inter & Orbitron Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    /* iOS Viewport Height & Safe Area Adjustments */
+    :root {
+      --sat: env(safe-area-inset-top);
+      --sab: env(safe-area-inset-bottom);
+      --sal: env(safe-area-inset-left);
+      --sar: env(safe-area-inset-right);
+    }
+    body {
+      font-family: 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, sans-serif;
+      padding-top: var(--sat);
+      padding-bottom: var(--sab);
+      padding-left: var(--sal);
+      padding-right: var(--sar);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .font-tech {
+      font-family: 'Orbitron', sans-serif;
+    }
+    .scanline {
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 0, 0, 0.3) 50%,
+        rgba(0, 0, 0, 0.3)
+      );
+      background-size: 100% 4px;
+    }
+    /* Hide scrollbar for slick native app feel */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-[100dvh] flex flex-col overflow-hidden bg-slate-950 text-slate-100 select-none">
+
+  <!-- iOS Unlocked Banner Overlay (Tap to enable sound on iPhone) -->
+  <div id="ios-unlock-overlay" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center gap-4">
+    <div class="w-16 h-16 rounded-2xl bg-cyan-950 border border-cyan-500/50 flex items-center justify-center text-cyan-400 font-tech text-3xl shadow-[0_0_25px_rgba(6,182,212,0.4)] animate-bounce">
+      <i data-lucide="bot"></i>
+    </div>
+    <div>
+      <h2 class="font-tech text-xl font-bold text-cyan-400 tracking-wider">CYBERSPEECH POCKET</h2>
+      <p class="text-xs text-slate-400 mt-1">iOS Safari 音声有効化システム</p>
+    </div>
+    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl text-xs text-slate-300 max-w-xs space-y-2 text-left">
+      <p class="flex items-center gap-1.5 text-amber-400 font-semibold"><i data-lucide="info" class="w-4 h-4"></i> iPhoneでご利用の方へ</p>
+      <p class="text-slate-400">iOSのセキュリティ仕様により、画面を1回タップして音声再生を開始する必要があります。</p>
+    </div>
+    <button id="btn-unlock-audio" class="w-full max-w-xs py-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-base shadow-[0_0_20px_rgba(6,182,212,0.5)] active:scale-95 transition flex items-center justify-center gap-2">
+      <i data-lucide="power" class="w-5 h-5"></i>
+      <span>タップして起動</span>
+    </button>
+  </div>
+
+  <!-- Header Section -->
+  <header class="bg-slate-900 border-b border-cyan-900/40 px-3 py-2.5 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-tech text-lg">
+        <i data-lucide="bot"></i>
+      </div>
+      <div>
+        <h1 class="font-tech text-sm font-bold tracking-wider text-cyan-400 flex items-center gap-1.5">
+          CYBERSPEECH <span class="text-[10px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">MOBILE</span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex items-center gap-2">
+      <button id="btn-sound-test" class="h-9 px-2.5 rounded-lg bg-slate-800 active:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1 text-xs">
+        <i data-lucide="volume-2" class="w-4 h-4 text-cyan-400"></i>
+        <span class="hidden sm:inline">テスト</span>
+      </button>
+      <button id="btn-toggle-settings" class="h-9 w-9 rounded-lg bg-slate-800 active:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center justify-center">
+        <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Collapsible Voice Settings Panel (Optimized for small screens) -->
+  <div id="settings-panel" class="hidden bg-slate-900 border-b border-slate-800 p-3 space-y-3 shrink-0 transition-all">
+    <div class="grid grid-cols-2 gap-2 text-xs">
+      <div>
+        <label for="voice-select" class="block text-[11px] text-slate-400 mb-1">音声エンジン</label>
+        <select id="voice-select" class="w-full bg-slate-950 border border-slate-700 text-xs text-slate-200 rounded-lg p-2 outline-none">
+          <option value="">標準音声</option>
+        </select>
+      </div>
+      <div>
+        <div class="flex justify-between text-[11px] mb-1">
+          <span class="text-slate-400">ピッチ (棒読み感)</span>
+          <span id="val-pitch" class="font-tech text-cyan-400">0.8</span>
+        </div>
+        <input type="range" id="slider-pitch" min="0.1" max="2.0" step="0.1" value="0.8" class="w-full accent-cyan-500 bg-slate-800 rounded">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 text-xs">
+      <div>
+        <div class="flex justify-between text-[11px] mb-1">
+          <span class="text-slate-400">話速 (スピード)</span>
+          <span id="val-rate" class="font-tech text-cyan-400">1.2</span>
+        </div>
+        <input type="range" id="slider-rate" min="0.5" max="2.5" step="0.1" value="1.2" class="w-full accent-cyan-500 bg-slate-800 rounded">
+      </div>
+      <div>
+        <div class="flex justify-between text-[11px] mb-1">
+          <span class="text-slate-400">音量</span>
+          <span id="val-volume" class="font-tech text-cyan-400">1.0</span>
+        </div>
+        <input type="range" id="slider-volume" min="0.0" max="1.0" step="0.1" value="1.0" class="w-full accent-cyan-500 bg-slate-800 rounded">
+      </div>
+    </div>
+
+    <!-- Mode Selector Radio Pills -->
+    <div class="pt-1">
+      <span class="block text-[11px] text-slate-400 mb-1">発声モード切替</span>
+      <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-lg border border-slate-800">
+        <label class="flex items-center justify-center p-1.5 rounded-md cursor-pointer text-[11px] transition text-center font-semibold text-slate-400 has-[:checked]:bg-cyan-950 has-[:checked]:text-cyan-300 has-[:checked]:border has-[:checked]:border-cyan-700">
+          <input type="radio" name="trigger-mode" value="enter" checked class="sr-only">
+          確定/送信
+        </label>
+        <label class="flex items-center justify-center p-1.5 rounded-md cursor-pointer text-[11px] transition text-center font-semibold text-slate-400 has-[:checked]:bg-cyan-950 has-[:checked]:text-cyan-300 has-[:checked]:border has-[:checked]:border-cyan-700">
+          <input type="radio" name="trigger-mode" value="char" class="sr-only">
+          1文字即時
+        </label>
+        <label class="flex items-center justify-center p-1.5 rounded-md cursor-pointer text-[11px] transition text-center font-semibold text-slate-400 has-[:checked]:bg-cyan-950 has-[:checked]:text-cyan-300 has-[:checked]:border has-[:checked]:border-cyan-700">
+          <input type="radio" name="trigger-mode" value="manual" class="sr-only">
+          手動送信
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main View Area -->
+  <main class="flex-1 flex flex-col p-3 gap-3 overflow-hidden">
+
+    <!-- Input Display Area (CRT Styled Terminal Card) -->
+    <div class="relative bg-slate-900 border-2 border-cyan-500/40 rounded-2xl p-3 shadow-[0_0_15px_rgba(6,182,212,0.15)] flex flex-col gap-2 shrink-0">
+      <div class="scanline absolute inset-0 pointer-events-none rounded-2xl"></div>
+      
+      <div class="flex items-center justify-between text-[11px] text-cyan-400/80 font-tech">
+        <span class="flex items-center gap-1"><i data-lucide="terminal" class="w-3.5 h-3.5"></i> INPUT_BUFFER</span>
+        <button id="btn-clear-input" class="text-slate-500 hover:text-slate-300 flex items-center gap-0.5">
+          <i data-lucide="delete" class="w-3.5 h-3.5"></i> クリア
+        </button>
+      </div>
+
+      <!-- Text Field & Large Send Button -->
+      <div class="flex items-center gap-2">
+        <input type="text" id="main-input" placeholder="入力してすぐ棒読み再生..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          class="flex-1 min-w-0 bg-slate-950 border border-cyan-900 focus:border-cyan-400 text-lg font-bold text-cyan-100 placeholder-slate-600 px-3 py-3 rounded-xl outline-none transition shadow-inner">
+        
+        <button id="btn-speak" class="h-12 px-5 bg-cyan-500 active:bg-cyan-400 text-slate-950 font-extrabold rounded-xl flex items-center justify-center gap-1 transition active:scale-95 shadow-[0_0_12px_rgba(6,182,212,0.4)] shrink-0">
+          <i data-lucide="send" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Animated Audio Visualizer Bar -->
+      <div class="h-1 bg-slate-950 rounded-full overflow-hidden flex items-center gap-1 px-0.5">
+        <div id="vis-bar-1" class="h-full w-1/4 bg-cyan-500/30 rounded transition-all duration-75"></div>
+        <div id="vis-bar-2" class="h-full w-1/4 bg-cyan-500/30 rounded transition-all duration-75"></div>
+        <div id="vis-bar-3" class="h-full w-1/4 bg-cyan-500/30 rounded transition-all duration-75"></div>
+        <div id="vis-bar-4" class="h-full w-1/4 bg-cyan-500/30 rounded transition-all duration-75"></div>
+      </div>
+    </div>
+
+    <!-- Quick Phrase Board (Responsive Grid & Large Touch Buttons) -->
+    <section class="flex-1 flex flex-col gap-2 min-h-0 overflow-hidden">
+      <div class="flex items-center justify-between shrink-0 px-1">
+        <h2 class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+          <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-400"></i>
+          定型句パレット (タップで即発声)
+        </h2>
+        <button id="btn-add-phrase" class="px-2 py-1 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg text-xs flex items-center gap-1 transition">
+          <i data-lucide="plus" class="w-3.5 h-3.5 text-emerald-400"></i> 追加
+        </button>
+      </div>
+
+      <!-- Grid Scroll Area for Mobile -->
+      <div id="phrase-grid" class="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-2 overflow-y-auto no-scrollbar pb-2">
+        <!-- Phrase Cards injected via JS -->
+      </div>
+    </section>
+
+    <!-- History Bottom Dock -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 shrink-0 max-h-28 flex flex-col">
+      <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1.5 shrink-0">
+        <span class="font-semibold flex items-center gap-1">
+          <i data-lucide="history" class="w-3.5 h-3.5 text-amber-400"></i> 最近の発声
+        </span>
+        <button id="btn-clear-history" class="hover:text-slate-200 text-[10px]">クリア</button>
+      </div>
+      <div id="history-list" class="flex-1 overflow-x-auto flex items-center gap-1.5 no-scrollbar py-0.5">
+        <!-- History Badges injected via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal: Add / Edit Phrase -->
+  <div id="modal-phrase" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-4 space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 id="modal-title" class="font-bold text-slate-200 text-sm">定型句の編集</h3>
+        <button id="btn-modal-close" class="text-slate-400 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-2.5">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">読み上げテキスト</label>
+          <input type="text" id="phrase-input-text" placeholder="例: こんにちは！" class="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded-xl p-2.5 text-sm outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">表示ラベル (短縮表示名)</label>
+          <input type="text" id="phrase-input-label" placeholder="例: 挨拶" class="w-full bg-slate-950 border border-slate-700 text-slate-100 rounded-xl p-2.5 text-sm outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">ボタンカラー</label>
+          <div class="flex gap-2" id="color-picker-container"></div>
+        </div>
+      </div>
+
+      <div class="flex justify-between pt-2">
+        <button id="btn-modal-delete" class="px-3 py-2 bg-rose-950 border border-rose-800 text-rose-300 rounded-xl text-xs active:bg-rose-900">削除</button>
+        <div class="flex gap-2">
+          <button id="btn-modal-cancel" class="px-3 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs">キャンセル</button>
+          <button id="btn-modal-save" class="px-4 py-2 bg-cyan-500 text-slate-950 font-bold rounded-xl text-xs active:bg-cyan-400">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    const DEFAULT_PHRASES = [
+      { id: '1', text: 'こんにちは！', label: 'こんにちは', color: 'cyan' },
+      { id: '2', text: 'はい、了解です。', label: 'はい / 了解', color: 'emerald' },
+      { id: '3', text: 'いいえ、違います。', label: 'いいえ', color: 'rose' },
+      { id: '4', text: 'ありがとうございます！', label: 'ありがとう', color: 'amber' },
+      { id: '5', text: '笑笑笑', label: '草 / 笑', color: 'purple' },
+      { id: '6', text: 'ちょっと待ってください。', label: 'ちょっと待って', color: 'cyan' },
+      { id: '7', text: 'なるほどですね。', label: 'なるほど', color: 'emerald' },
+      { id: '8', text: 'お疲れ様でした！', label: 'おつかれ', color: 'amber' }
+    ];
+
+    const COLOR_CLASSES = {
+      cyan: 'bg-cyan-950/70 border-cyan-800/80 active:bg-cyan-900 text-cyan-200',
+      emerald: 'bg-emerald-950/70 border-emerald-800/80 active:bg-emerald-900 text-emerald-200',
+      amber: 'bg-amber-950/70 border-amber-800/80 active:bg-amber-900 text-amber-200',
+      rose: 'bg-rose-950/70 border-rose-800/80 active:bg-rose-900 text-rose-200',
+      purple: 'bg-purple-950/70 border-purple-800/80 active:bg-purple-900 text-purple-200'
+    };
+
+    // State
+    let phrases = JSON.parse(localStorage.getItem('cyberspeech_phrases_m')) || DEFAULT_PHRASES;
+    let historyList = JSON.parse(localStorage.getItem('cyberspeech_history_m')) || [];
+    let selectedColor = 'cyan';
+    let currentEditingId = null;
+    let audioCtx = null;
+    let audioUnlocked = false;
+
+    // Web Speech API
+    const synth = window.speechSynthesis;
+    let voices = [];
+
+    // Elements
+    const mainInput = document.getElementById('main-input');
+    const btnSpeak = document.getElementById('btn-speak');
+    const voiceSelect = document.getElementById('voice-select');
+    const sliderPitch = document.getElementById('slider-pitch');
+    const sliderRate = document.getElementById('slider-rate');
+    const sliderVolume = document.getElementById('slider-volume');
+    const valPitch = document.getElementById('val-pitch');
+    const valRate = document.getElementById('val-rate');
+    const valVolume = document.getElementById('val-volume');
+    const phraseGrid = document.getElementById('phrase-grid');
+    const historyContainer = document.getElementById('history-list');
+    const modalPhrase = document.getElementById('modal-phrase');
+    const settingsPanel = document.getElementById('settings-panel');
+    const iosUnlockOverlay = document.getElementById('ios-unlock-overlay');
+
+    // iOS Web Audio & Speech Unlocker
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        // Blank utterance to warm up iOS speech engine
+        const dummyUtterance = new SpeechSynthesisUtterance('');
+        dummyUtterance.volume = 0;
+        synth.speak(dummyUtterance);
+
+        audioUnlocked = true;
+        iosUnlockOverlay.classList.add('hidden');
+      } catch (e) {
+        console.warn('Audio unlock error:', e);
+        iosUnlockOverlay.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('btn-unlock-audio').addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio, { once: true });
+
+    // Haptic & Sound Feedback
+    function playBeep(freq = 800) {
+      if (navigator.vibrate) navigator.vibrate(10); // Haptic vibration on supported phones
+      if (!audioCtx || !audioUnlocked) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.04);
+      } catch (e) {}
+    }
+
+    // Populate Speech Voices
+    function loadVoices() {
+      voices = synth.getVoices().filter(v => v.lang.includes('ja') || v.lang.includes('JP') || v.lang.includes('en'));
+      voiceSelect.innerHTML = '';
+      if (voices.length === 0) voices = synth.getVoices();
+
+      voices.forEach((v, index) => {
+        const opt = document.createElement('option');
+        opt.textContent = `${v.name} (${v.lang})`;
+        opt.value = index;
+        voiceSelect.appendChild(opt);
+      });
+
+      const jaIndex = voices.findIndex(v => v.lang.includes('ja'));
+      if (jaIndex !== -1) voiceSelect.value = jaIndex;
+    }
+
+    loadVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    // Core Speech Output
+    function speak(text) {
+      if (!text || !text.trim()) return;
+
+      synth.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (voices[voiceSelect.value]) utterance.voice = voices[voiceSelect.value];
+
+      utterance.pitch = parseFloat(sliderPitch.value);
+      utterance.rate = parseFloat(sliderRate.value);
+      utterance.volume = parseFloat(sliderVolume.value);
+
+      animateVisualizer(true);
+      utterance.onend = () => animateVisualizer(false);
+      utterance.onerror = () => animateVisualizer(false);
+
+      playBeep(1000);
+      synth.speak(utterance);
+      addHistory(text);
+    }
+
+    let visInterval = null;
+    function animateVisualizer(active) {
+      const bars = [1, 2, 3, 4].map(i => document.getElementById(`vis-bar-${i}`));
+      if (active) {
+        if (visInterval) clearInterval(visInterval);
+        visInterval = setInterval(() => {
+          bars.forEach(b => b.style.backgroundColor = `rgba(6, 182, 212, ${Math.random() * 0.7 + 0.3})`);
+        }, 80);
+      } else {
+        clearInterval(visInterval);
+        bars.forEach(b => b.style.backgroundColor = 'rgba(6, 182, 212, 0.3)');
+      }
+    }
+
+    // Render Soundboard Cards
+    function renderPhrases() {
+      phraseGrid.innerHTML = '';
+      phrases.forEach(p => {
+        const colorClass = COLOR_CLASSES[p.color] || COLOR_CLASSES.cyan;
+        const card = document.createElement('div');
+        card.className = `p-3 rounded-2xl border flex flex-col justify-between cursor-pointer transition-all active:scale-95 shadow-md ${colorClass} min-h-[72px]`;
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <span class="font-bold text-sm text-slate-100 line-clamp-1">${p.label || p.text}</span>
+            <button class="btn-edit text-slate-400 p-1 -mr-1 -mt-1"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+          </div>
+          <div class="text-[10px] text-slate-400 line-clamp-1 mt-1">${p.text}</div>
+        `;
+
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.btn-edit')) return;
+          speak(p.text);
+        });
+
+        card.querySelector('.btn-edit').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openModal(p.id);
+        });
+
+        phraseGrid.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    // History Log
+    function addHistory(text) {
+      if (historyList[0] === text) return;
+      historyList.unshift(text);
+      if (historyList.length > 15) historyList.pop();
+      localStorage.setItem('cyberspeech_history_m', JSON.stringify(historyList));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      historyContainer.innerHTML = '';
+      if (historyList.length === 0) {
+        historyContainer.innerHTML = '<span class="text-[11px] text-slate-600">発声履歴なし</span>';
+        return;
+      }
+      historyList.forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 shrink-0 active:bg-cyan-950';
+        btn.textContent = t;
+        btn.addEventListener('click', () => speak(t));
+        historyContainer.appendChild(btn);
+      });
+    }
+
+    // Typing Event & Input Handling
+    let lastChar = '';
+    mainInput.addEventListener('input', () => {
+      const mode = document.querySelector('input[name="trigger-mode"]:checked').value;
+      const val = mainInput.value;
+
+      if (mode === 'char') {
+        const char = val.slice(-1);
+        if (char && char !== lastChar && char.trim()) {
+          speak(char);
+        }
+        lastChar = char;
+      } else {
+        playBeep(600);
+      }
+    });
+
+    mainInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const mode = document.querySelector('input[name="trigger-mode"]:checked').value;
+        if (mode === 'enter' || mode === 'manual') {
+          speak(mainInput.value);
+          mainInput.value = '';
+        }
+      }
+    });
+
+    // Button Handlers
+    btnSpeak.addEventListener('click', () => {
+      speak(mainInput.value);
+      mainInput.value = '';
+    });
+
+    document.getElementById('btn-clear-input').addEventListener('click', () => mainInput.value = '');
+    document.getElementById('btn-sound-test').addEventListener('click', () => speak('ロボットボイスの動作確認中。'));
+    document.getElementById('btn-toggle-settings').addEventListener('click', () => settingsPanel.classList.toggle('hidden'));
+    document.getElementById('btn-clear-history').addEventListener('click', () => {
+      historyList = [];
+      localStorage.removeItem('cyberspeech_history_m');
+      renderHistory();
+    });
+
+    // Sliders
+    sliderPitch.addEventListener('input', () => valPitch.textContent = sliderPitch.value);
+    sliderRate.addEventListener('input', () => valRate.textContent = sliderRate.value);
+    sliderVolume.addEventListener('input', () => valVolume.textContent = sliderVolume.value);
+
+    // Modal Operations
+    function openModal(id = null) {
+      currentEditingId = id;
+      const colorContainer = document.getElementById('color-picker-container');
+      colorContainer.innerHTML = '';
+
+      Object.keys(COLOR_CLASSES).forEach(c => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `w-8 h-8 rounded-full border-2 ${c === selectedColor ? 'border-white scale-110' : 'border-transparent'} ${COLOR_CLASSES[c].split(' ')[0]}`;
+        btn.addEventListener('click', () => {
+          selectedColor = c;
+          openModal(currentEditingId);
+        });
+        colorContainer.appendChild(btn);
+      });
+
+      if (id) {
+        document.getElementById('modal-title').textContent = '定型句の編集';
+        document.getElementById('btn-modal-delete').classList.remove('hidden');
+        const p = phrases.find(item => item.id === id);
+        if (p) {
+          document.getElementById('phrase-input-text').value = p.text;
+          document.getElementById('phrase-input-label').value = p.label || '';
+          selectedColor = p.color || 'cyan';
+        }
+      } else {
+        document.getElementById('modal-title').textContent = '新規定型句の追加';
+        document.getElementById('btn-modal-delete').classList.add('hidden');
+        document.getElementById('phrase-input-text').value = '';
+        document.getElementById('phrase-input-label').value = '';
+        selectedColor = 'cyan';
+      }
+
+      modalPhrase.classList.remove('hidden');
+      modalPhrase.classList.add('flex');
+    }
+
+    function closeModal() {
+      modalPhrase.classList.add('hidden');
+      modalPhrase.classList.remove('flex');
+    }
+
+    document.getElementById('btn-add-phrase').addEventListener('click', () => openModal());
+    document.getElementById('btn-modal-close').addEventListener('click', closeModal);
+    document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
+
+    document.getElementById('btn-modal-save').addEventListener('click', () => {
+      const text = document.getElementById('phrase-input-text').value.trim();
+      const label = document.getElementById('phrase-input-label').value.trim();
+
+      if (!text) return;
+
+      if (currentEditingId) {
+        const idx = phrases.findIndex(p => p.id === currentEditingId);
+        if (idx !== -1) phrases[idx] = { id: currentEditingId, text, label, color: selectedColor };
+      } else {
+        phrases.push({ id: Date.now().toString(), text, label, color: selectedColor });
+      }
+
+      localStorage.setItem('cyberspeech_phrases_m', JSON.stringify(phrases));
+      renderPhrases();
+      closeModal();
+    });
+
+    document.getElementById('btn-modal-delete').addEventListener('click', () => {
+      if (!currentEditingId) return;
+      phrases = phrases.filter(p => p.id !== currentEditingId);
+      localStorage.setItem('cyberspeech_phrases_m', JSON.stringify(phrases));
+      renderPhrases();
+      closeModal();
+    });
+
+    // App Init
+    window.onload = () => {
+      renderPhrases();
+      renderHistory();
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>
